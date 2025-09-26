@@ -7,7 +7,7 @@ import {
   SortingState,
   useReactTable
 } from '@tanstack/react-table';
-import { useMemo, useState, useCallback } from 'react';
+import { ReactNode, useMemo, useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Order } from '../../../types/order';
 import { useOrdersStore } from '../../../store/ordersStore';
@@ -29,14 +29,25 @@ const editableColumns = new Set([
 
 const formatCurrency = (value: number) => `${value.toLocaleString('fr-FR')} FCFA`;
 
+type OrdersTableEnhancements = {
+  selection?: {
+    selectedIds: string[];
+    onSelectOne: (orderId: string, next: boolean) => void;
+    onSelectAll: (selectAll: boolean) => void;
+  };
+  actions?: (order: Order) => ReactNode;
+};
+
 const OrdersTable = ({
   orders,
   isLoading,
-  onUpdate
+  onUpdate,
+  enhancements
 }: {
   orders: Order[];
   isLoading: boolean;
   onUpdate: (orderId: string, changes: Partial<Order>) => Promise<void>;
+  enhancements?: OrdersTableEnhancements;
 }) => {
   const { sorts, setSorts, isSaving } = useOrdersStore();
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
@@ -133,7 +144,55 @@ const OrdersTable = ({
     [buildChanges, editingCell, isSaving, onUpdate]
   );
 
-  const columns = useMemo<ColumnDef<Order>[]>(
+  const selectedSet = useMemo(() => new Set(enhancements?.selection?.selectedIds ?? []), [enhancements?.selection?.selectedIds]);
+  const allSelected = useMemo(() => {
+    if (!enhancements?.selection) {
+      return false;
+    }
+    return orders.length > 0 && orders.every((order) => selectedSet.has(order.id));
+  }, [enhancements?.selection, orders, selectedSet]);
+
+  const selectionColumn = useMemo<ColumnDef<Order> | null>(() => {
+    if (!enhancements?.selection) {
+      return null;
+    }
+    return {
+      id: 'selection',
+      header: () => (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={(event) => enhancements.selection?.onSelectAll(event.target.checked)}
+          onClick={(event) => event.stopPropagation()}
+          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/50"
+        />
+      ),
+      cell: (info) => (
+        <input
+          type="checkbox"
+          checked={selectedSet.has(info.row.original.id)}
+          onChange={(event) => enhancements.selection?.onSelectOne(info.row.original.id, event.target.checked)}
+          onClick={(event) => event.stopPropagation()}
+          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/50"
+        />
+      ),
+      size: 40
+    } satisfies ColumnDef<Order>;
+  }, [allSelected, enhancements?.selection, selectedSet]);
+
+  const actionsColumn = useMemo<ColumnDef<Order> | null>(() => {
+    if (!enhancements?.actions) {
+      return null;
+    }
+    return {
+      id: 'actions',
+      header: 'Actions',
+      cell: (info) => enhancements.actions?.(info.row.original),
+      size: 120
+    } satisfies ColumnDef<Order>;
+  }, [enhancements?.actions]);
+
+  const baseColumns = useMemo<ColumnDef<Order>[]>(
     () => [
       {
         header: 'Product Name',
@@ -212,6 +271,17 @@ const OrdersTable = ({
     ],
     [renderEditableCell]
   );
+
+  const columns = useMemo<ColumnDef<Order>[]>(() => {
+    const result = [...baseColumns];
+    if (actionsColumn) {
+      result.push(actionsColumn);
+    }
+    if (selectionColumn) {
+      result.unshift(selectionColumn);
+    }
+    return result;
+  }, [actionsColumn, baseColumns, selectionColumn]);
 
   const table = useReactTable({
     data: orders,
