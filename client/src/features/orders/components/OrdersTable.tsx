@@ -136,12 +136,12 @@ const OrdersTable = ({
   const columns = useMemo<ColumnDef<Order>[]>(
     () => [
       {
-        header: 'Produit',
+        header: 'Product Name',
         accessorKey: 'productName',
         cell: (info) => renderEditableCell(info.row.original.productName, info.row.original, 'productName')
       },
       {
-        header: 'Prix (FCFA)',
+        header: 'Product Price',
         accessorKey: 'productPrice',
         cell: (info) =>
           renderEditableCell(
@@ -152,22 +152,22 @@ const OrdersTable = ({
           )
       },
       {
-        header: 'Quantité',
+        header: 'Product Quantity',
         accessorKey: 'productQuantity',
         cell: (info) => renderEditableCell(info.row.original.productQuantity, info.row.original, 'productQuantity')
       },
       {
-        header: 'Sous-total',
-        accessorKey: 'subtotal',
-        cell: (info) => formatCurrency(info.row.original.subtotal)
+        header: 'Ville',
+        accessorKey: 'city',
+        cell: (info) => info.row.original.city || '-'
       },
       {
-        header: 'Client',
+        header: 'First Name',
         accessorKey: 'firstName',
         cell: (info) => renderEditableCell(info.row.original.firstName, info.row.original, 'firstName')
       },
       {
-        header: 'Téléphone',
+        header: 'Phone',
         accessorKey: 'phone',
         cell: (info) => renderEditableCell(info.row.original.phone, info.row.original, 'phone')
       },
@@ -177,12 +177,11 @@ const OrdersTable = ({
         cell: (info) => (
           <div className="max-w-xs">
             {renderEditableCell(info.row.original.address1, info.row.original, 'address1')}
-            {info.row.original.city && <p className="text-xs text-slate-500">{info.row.original.city}</p>}
           </div>
         )
       },
       {
-        header: 'Date',
+        header: 'DATE',
         accessorKey: 'createdDate',
         cell: (info) =>
           renderEditableCell(
