@@ -41,3 +41,21 @@ export const buildRangeFromSheetName = (sheetName?: string): string | undefined 
   }
   return `${sheetName}!A:Z`;
 };
+
+// Fonction pour extraire l'ID d'une URL Google Sheets
+export const extractSpreadsheetId = (input: string): string | null => {
+  // Si c'est déjà un ID (pas d'URL), le retourner tel quel
+  if (!input.includes('docs.google.com')) {
+    return input;
+  }
+
+  // Regex pour extraire l'ID depuis une URL Google Sheets
+  const regex = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  const match = input.match(regex);
+  
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  return null;
+};
