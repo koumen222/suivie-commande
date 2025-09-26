@@ -21,7 +21,7 @@ export type SheetConnection = {
   gid?: string;
 };
 
-type OrdersState = {
+export type OrdersState = {
   orders: Order[];
   filtered: Order[];
   meta?: OrdersMeta;
