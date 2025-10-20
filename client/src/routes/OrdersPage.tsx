@@ -82,7 +82,6 @@ const OrdersPage = () => {
       });
       loadOrders(sheetId, range ?? undefined, method, searchParams.get('gid') ?? undefined, mapping, sheetName ?? undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

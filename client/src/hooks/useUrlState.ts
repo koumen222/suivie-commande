@@ -40,7 +40,6 @@ export const useUrlState = () => {
         console.error('Failed to parse sorts param', error);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

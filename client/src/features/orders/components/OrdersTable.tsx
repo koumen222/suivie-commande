@@ -81,9 +81,11 @@ const OrdersTable = ({
         next.createdDate = rawValue ? new Date(rawValue).toISOString() : undefined;
         break;
       }
-      default:
-        (next as any)[columnId] = rawValue;
+      default: {
+        const key = columnId as keyof Order;
+        next[key] = rawValue as Order[keyof Order];
         break;
+      }
     }
     return next;
   }, []);

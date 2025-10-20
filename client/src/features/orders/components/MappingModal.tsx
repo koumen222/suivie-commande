@@ -77,7 +77,7 @@ const MappingModal = ({
                   Mapper les colonnes manquantes
                 </Dialog.Title>
                 <p className="mt-2 text-sm text-slate-600">
-                  Nous n'avons pas trouvé certaines colonnes obligatoires. Associez-les manuellement ci-dessous.
+                  Nous n&apos;avons pas trouvé certaines colonnes obligatoires. Associez-les manuellement ci-dessous.
                 </p>
                 <div className="mt-6 space-y-4">
                   {missing.map((field) => (

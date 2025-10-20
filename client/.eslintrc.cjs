@@ -14,5 +14,10 @@ module.exports = {
   ignorePatterns: ['dist'],
   rules: {
     'react/prop-types': 'off'
+  },
+  settings: {
+    react: {
+      version: 'detect'
+    }
   }
 };
