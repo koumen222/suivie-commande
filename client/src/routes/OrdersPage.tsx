@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useOrdersData } from '../features/orders/useOrdersData';
 import { useOrdersStore } from '../store/ordersStore';
@@ -11,14 +11,53 @@ import { exportOrdersCsv } from '../lib/api';
 import MappingModal from '../features/orders/components/MappingModal';
 import { useUrlState } from '../hooks/useUrlState';
 import { useSearchParams } from 'react-router-dom';
+import { ENABLE_ENHANCED_UI } from '../config/featureFlags';
+import FilterBarV2 from '../features/orders/enhancements/FilterBarV2';
+import OrdersNavigation from '../features/orders/enhancements/OrdersNavigation';
+import EnhancedOrdersTable from '../features/orders/enhancements/EnhancedOrdersTable';
+import { useAllProducts, useTopProducts } from '../store/selectors/ordersSelectors';
 
 const OrdersPage = () => {
   const { connect, handleUpdateOrder, stats, filters, setFilters, loadOrders, setConnection } = useOrdersData();
   const { filtered, connection, isLoading, meta } = useOrdersStore();
+  const orders = useOrdersStore((state) => state.orders);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [showMapping, setShowMapping] = useState(false);
   const [searchParams] = useSearchParams();
   useUrlState();
+
+  const productOptions = useAllProducts();
+  const computedTopProducts = useTopProducts();
+  const topProducts = useMemo(() => {
+    const merged = new Map<string, { name: string; total: number; quantity: number }>();
+    stats?.topProducts?.forEach((product) => {
+      merged.set(product.name, {
+        name: product.name,
+        total: product.total,
+        quantity: 0
+      });
+    });
+    computedTopProducts.forEach((product) => {
+      const existing = merged.get(product.name);
+      if (existing) {
+        existing.total = Math.max(existing.total, product.total);
+        existing.quantity = product.quantity;
+      } else {
+        merged.set(product.name, product);
+      }
+    });
+    return Array.from(merged.values()).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [computedTopProducts, stats?.topProducts]);
+
+  const cities = useMemo(() => {
+    const values = new Set<string>();
+    orders.forEach((order) => {
+      if (order.city) {
+        values.add(order.city);
+      }
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [orders]);
 
   useEffect(() => {
     document.title = 'Suivi commandes';
@@ -43,7 +82,6 @@ const OrdersPage = () => {
       });
       loadOrders(sheetId, range ?? undefined, method, searchParams.get('gid') ?? undefined, mapping, sheetName ?? undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -104,6 +142,11 @@ const OrdersPage = () => {
             <SheetConnector onConnect={connect} method={connection?.method} />
           </div>
         </div>
+        {ENABLE_ENHANCED_UI && (
+          <div className="mx-auto flex max-w-7xl justify-end px-4 pb-4">
+            <OrdersNavigation />
+          </div>
+        )}
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8">
@@ -112,21 +155,38 @@ const OrdersPage = () => {
         </section>
 
         <section className="mb-6">
-          <FiltersBar
-            filters={filters}
-            onFiltersChange={setFilters}
-            onRefresh={handleRefresh}
-            isLoading={isLoading}
-          />
+          {ENABLE_ENHANCED_UI ? (
+            <FilterBarV2
+              filters={filters}
+              onFiltersChange={setFilters}
+              onRefresh={handleRefresh}
+              isLoading={isLoading}
+              products={productOptions}
+              topProducts={topProducts}
+              cities={cities}
+              connection={connection}
+            />
+          ) : (
+            <FiltersBar
+              filters={filters}
+              onFiltersChange={setFilters}
+              onRefresh={handleRefresh}
+              isLoading={isLoading}
+            />
+          )}
         </section>
 
         <section className="mb-6">
           <SalesChart stats={stats} />
         </section>
 
-        <section className="rounded-lg bg-white p-4 shadow-sm">
-          <OrdersTable orders={filtered} isLoading={isLoading} onUpdate={handleUpdateOrder} />
-        </section>
+        {ENABLE_ENHANCED_UI ? (
+          <EnhancedOrdersTable orders={filtered} isLoading={isLoading} onUpdate={handleUpdateOrder} />
+        ) : (
+          <section className="rounded-lg bg-white p-4 shadow-sm">
+            <OrdersTable orders={filtered} isLoading={isLoading} onUpdate={handleUpdateOrder} />
+          </section>
+        )}
       </main>
       <MappingModal
         isOpen={Boolean(meta?.missingHeaders?.length) && showMapping}

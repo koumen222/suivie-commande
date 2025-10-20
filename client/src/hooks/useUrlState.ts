@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useOrdersStore } from '../store/ordersStore';
 import qs from 'qs';
+import { ENABLE_ENHANCED_UI } from '../config/featureFlags';
+import { fromProductSlug, toProductSlug } from '../features/orders/enhancements/productSlug';
 
 const filterKeys = ['date', 'city', 'address', 'product', 'phone', 'search'] as const;
 
@@ -17,6 +19,13 @@ export const useUrlState = () => {
         parsedFilters[key] = value;
       }
     });
+    if (ENABLE_ENHANCED_UI && !parsedFilters.product) {
+      const slug = params.get('produit');
+      if (slug) {
+        parsedFilters.product = fromProductSlug(slug);
+      }
+    }
+
     if (Object.keys(parsedFilters).length > 0) {
       setFilters(parsedFilters);
     }
@@ -31,7 +40,6 @@ export const useUrlState = () => {
         console.error('Failed to parse sorts param', error);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -39,6 +47,7 @@ export const useUrlState = () => {
       {
         ...filters,
         sorts: sorts.length ? JSON.stringify(sorts) : undefined,
+        produit: ENABLE_ENHANCED_UI && filters.product ? toProductSlug(filters.product) : undefined,
         sheetId: connection?.sheetId,
         range: connection?.sheetRange,
         method: connection?.method,

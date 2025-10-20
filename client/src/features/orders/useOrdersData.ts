@@ -4,6 +4,36 @@ import { fetchDailyStats, fetchOrders, parseSheetLink, updateOrder } from '../..
 import { Order } from '../../types/order';
 import { toast } from 'react-hot-toast';
 
+type ErrorWithResponse = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
+type ErrorWithMessage = {
+  message?: string;
+};
+
+const isErrorWithResponse = (error: unknown): error is ErrorWithResponse =>
+  typeof error === 'object' && error !== null && 'response' in error;
+
+const isErrorWithMessage = (error: unknown): error is ErrorWithMessage =>
+  typeof error === 'object' && error !== null && 'message' in error;
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (isErrorWithResponse(error) && typeof error.response?.data?.message === 'string') {
+    return error.response.data.message;
+  }
+
+  if (isErrorWithMessage(error) && typeof error.message === 'string') {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 export const useOrdersData = () => {
   const {
     connection,
@@ -38,9 +68,10 @@ export const useOrdersData = () => {
         gid: parsed.gid
       });
       await loadOrders(parsed.sheetId, parsed.sheetRange, parsed.method, parsed.gid, undefined, parsed.sheetName);
-    } catch (error: any) {
-      setError(error?.response?.data?.message ?? 'Impossible de se connecter à Google Sheets');
-      toast.error(error?.response?.data?.message ?? 'Erreur de connexion au sheet');
+    } catch (error) {
+      const message = getErrorMessage(error, 'Impossible de se connecter à Google Sheets');
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -59,9 +90,10 @@ export const useOrdersData = () => {
       const { orders, meta } = await fetchOrders({ sheetId, range, method, gid, mapping, sheetName });
       setOrders(orders, meta);
       await loadStats(sheetId, filters.date);
-    } catch (error: any) {
-      setError(error?.response?.data?.message ?? 'Erreur lors du chargement des commandes');
-      toast.error(error?.response?.data?.message ?? 'Erreur lors du chargement des commandes');
+    } catch (error) {
+      const message = getErrorMessage(error, 'Erreur lors du chargement des commandes');
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -89,8 +121,8 @@ export const useOrdersData = () => {
       const { order } = await updateOrder(connection.sheetId, orderId, changes);
       updateOrderInStore(orderId, order);
       toast.success('Commande mise à jour');
-    } catch (error: any) {
-      const message = error?.response?.data?.message ?? 'Impossible de sauvegarder la commande';
+    } catch (error) {
+      const message = getErrorMessage(error, 'Impossible de sauvegarder la commande');
       toast.error(message);
     } finally {
       setSaving(orderId, false);
@@ -101,14 +133,12 @@ export const useOrdersData = () => {
     if (connection?.sheetId) {
       loadOrders(connection.sheetId, connection.sheetRange, connection.method, undefined, undefined, connection.sheetName);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection?.sheetId]);
 
   useEffect(() => {
     if (connection?.sheetId) {
       loadStats(connection.sheetId, filters.date);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.date, connection?.sheetId]);
 
   return {
